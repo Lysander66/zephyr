@@ -97,7 +97,7 @@ func main() {
 			if err != nil {
 				log.Printf("[ERROR] %v", err)
 			} else {
-				fmt.Printf("%s:\n%s\n", host, output)
+				fmt.Print(output)
 			}
 
 			<-semaphoreChan
@@ -123,7 +123,7 @@ func runLocal(config *Config, numParallel int) {
 			if err != nil {
 				log.Printf("[ERROR] %v", err)
 			} else {
-				fmt.Print(output)
+				fmt.Printf("%s:\n%s\n", host, output)
 			}
 
 			<-semaphoreChan
