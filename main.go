@@ -77,7 +77,6 @@ func main() {
 
 	wg := sync.WaitGroup{}
 	semaphoreChan := make(chan struct{}, *numParallel)
-	resultChan := make(chan string)
 
 	for _, host := range config.Hosts {
 		wg.Add(1)
@@ -89,23 +88,12 @@ func main() {
 			if err != nil {
 				log.Printf("[ERROR] %v", err)
 			} else {
-				resultChan <- output
+				fmt.Print(output)
 			}
 
 			<-semaphoreChan
 		}(host)
 	}
 
-	done := make(chan struct{})
-	// Output results when all goroutines finish
-	go func() {
-		for r := range resultChan {
-			fmt.Print(r)
-		}
-		done <- struct{}{}
-	}()
-
 	wg.Wait()
-	close(resultChan)
-	<-done
 }
