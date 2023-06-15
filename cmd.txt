@@ -1,0 +1,10 @@
+// Host
+host1
+host2
+
+// Command
+cd /srv
+date +"%Y/%m/%d %H:%M:%S"
+sleep 2
+date +"%Y/%m/%d %H:%M:%S"
+ls
