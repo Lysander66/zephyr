@@ -56,7 +56,7 @@ func run(m map[string]*service.SSHConfig, host, command string, timeout time.Dur
 	if err != nil {
 		return "", fmt.Errorf("%s: %v", host, err)
 	}
-	return fmt.Sprintf("%s:\n%s\n", host, output), nil
+	return string(output), nil
 }
 
 func main() {
@@ -64,8 +64,8 @@ func main() {
 	flag.BoolVar(&lFlag, "l", false, "run on local machine")
 	commandFile := flag.String("c", "cmd.txt", "command file path")
 	sshConfigFile := flag.String("s", "~/.ssh/config", "ssh config file path")
-	numParallel := flag.Int("p", 10, "number of parallel hosts to process")
-	timeoutSeconds := flag.Int("t", 30, "timeout in seconds for each command")
+	numParallel := flag.Int("p", 100, "number of parallel hosts to process")
+	timeoutSeconds := flag.Int("t", 3600, "timeout in seconds for each command")
 	flag.Parse()
 
 	config := readConfig(*commandFile)
@@ -87,9 +87,9 @@ func main() {
 	wg := sync.WaitGroup{}
 	semaphoreChan := make(chan struct{}, *numParallel)
 
-	for _, host := range config.Hosts {
+	for i, host := range config.Hosts {
 		wg.Add(1)
-		go func(host string) {
+		go func(host string, i int) {
 			defer wg.Done()
 			semaphoreChan <- struct{}{}
 
@@ -97,14 +97,15 @@ func main() {
 			if err != nil {
 				log.Printf("[ERROR] %v", err)
 			} else {
-				fmt.Print(output)
+				fmt.Printf("%d %s:\n%s\n", i, host, output)
 			}
 
 			<-semaphoreChan
-		}(host)
+		}(host, i)
 	}
 
 	wg.Wait()
+	log.Println("done!")
 }
 
 func runLocal(config *Config, numParallel int) {
@@ -131,6 +132,7 @@ func runLocal(config *Config, numParallel int) {
 	}
 
 	wg.Wait()
+	log.Println("done!")
 }
 
 func replaceVars(command, host string) string {

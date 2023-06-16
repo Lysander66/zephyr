@@ -27,10 +27,8 @@ host1
 host2
 
 // Command
-cd /srv
-date +"%Y/%m/%d %H:%M:%S"
-sleep 2
-cat /etc/os-release | grep "PRETTY_NAME" | awk -F\" '{print $2}' && cat /proc/cpuinfo  | grep "processor" | wc -l && cat /proc/meminfo | grep MemTotal | awk '{print $2}'
+curl -fsSL https://get.docker.com -o get-docker.sh
+chmod +x ./get-docker.sh && ./get-docker.sh -y
 ```
 
 ## Run on local machine

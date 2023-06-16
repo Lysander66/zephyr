@@ -3,8 +3,13 @@ host1
 host2
 
 // Command
-cd /srv
-date +"%Y/%m/%d %H:%M:%S"
+curl -s "https://ip.cn/api/index?ip=&type=0" | grep -oP '(?<="address":")[^"]*'
+
+curl -s "https://qifu-api.baidubce.com/ip/geo/v1/district?ip=$(curl -s ifconfig.me)" | grep -oP '(?<="city":")[^"]*'
+
+cat /etc/os-release | grep "PRETTY_NAME" | awk -F\" '{print $2}' && cat /proc/cpuinfo  | grep "processor" | wc -l && cat /proc/meminfo | grep MemTotal | awk '{print $2}'
+
 sleep 2
+
 date +"%Y/%m/%d %H:%M:%S"
-ls
+
