@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.4.0 / 2024-08-10
+
+- [FEATURE] net/http client wrapper
+
 ## 0.3.0 / 2024-08-10
 
 - [FEATURE] Stream URL Generator

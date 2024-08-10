@@ -14,6 +14,10 @@ Go bindings for aria2
 - aria2.getGlobalStat
 - system.listMethods
 
+## znet
+
+net/http client wrapper
+
 ## native ssh client
 
 [How to batch execute commands on multiple servers through BatchShell?](https://www.bilibili.com/video/BV1WN411r7gH)
