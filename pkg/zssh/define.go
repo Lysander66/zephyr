@@ -1,4 +1,4 @@
-package service
+package zssh
 
 import (
 	"bufio"
@@ -11,14 +11,14 @@ type SSHConfig struct {
 	Host         string
 	HostName     string
 	User         string
-	Port         int
+	Port         string
 	IdentityFile string
 	ProxyJump    string //since OpenSSH 7.3
 	ProxyCommand string //ssh -W %h:%p host1
 }
 
 func LoadSSHConfig(name string) []*SSHConfig {
-	file, err := os.Open(parseHomePath(name))
+	file, err := os.Open(findHomePath(name))
 	if err != nil {
 		panic(err)
 	}
@@ -67,7 +67,7 @@ func LoadSSHConfig(name string) []*SSHConfig {
 	return configs
 }
 
-func parseHomePath(s string) string {
+func findHomePath(s string) string {
 	if strings.HasPrefix(s, "~/") {
 		return strings.ReplaceAll(s, "~", os.Getenv("HOME"))
 	}

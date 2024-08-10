@@ -4,13 +4,14 @@ import (
 	"bufio"
 	"flag"
 	"fmt"
-	"github.com/Lysander66/zephyr/internal/service"
 	"log"
 	"os"
 	"os/exec"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/Lysander66/zephyr/pkg/zssh"
 )
 
 type Config struct {
@@ -47,12 +48,12 @@ func readConfig(name string) *Config {
 	return config
 }
 
-func run(m map[string]*service.SSHConfig, host, command string, timeout time.Duration) (string, error) {
+func run(m map[string]*zssh.SSHConfig, host, command string, timeout time.Duration) (string, error) {
 	sshConfig, ok := m[host]
 	if !ok {
 		return "", fmt.Errorf("host not found: %s", host)
 	}
-	output, err := service.RunCommandWithTimeout(sshConfig, replaceVars(command, host), timeout)
+	output, err := zssh.RunCommandWithTimeout(sshConfig, replaceVars(command, host), timeout)
 	if err != nil {
 		return "", fmt.Errorf("%s: %v", host, err)
 	}
@@ -78,8 +79,8 @@ func main() {
 	}
 
 	command := strings.Join(config.Commands, " && ")
-	sshConfigs := service.LoadSSHConfig(*sshConfigFile)
-	m := make(map[string]*service.SSHConfig)
+	sshConfigs := zssh.LoadSSHConfig(*sshConfigFile)
+	m := make(map[string]*zssh.SSHConfig)
 	for _, v := range sshConfigs {
 		m[v.Host] = v
 	}

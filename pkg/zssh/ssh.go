@@ -1,22 +1,18 @@
-package service
+package zssh
 
 import (
 	"bytes"
 	"fmt"
-	"golang.org/x/crypto/ssh"
 	"log"
+	"net"
 	"os"
 	"time"
+
+	"golang.org/x/crypto/ssh"
 )
 
 func RunCommandWithTimeout(c *SSHConfig, cmd string, timeout time.Duration) ([]byte, error) {
-	var (
-		addr = fmt.Sprintf("%s:%d", c.HostName, c.Port)
-		user = c.User
-		file = parseHomePath(c.IdentityFile)
-	)
-
-	pemBytes, err := os.ReadFile(file)
+	pemBytes, err := os.ReadFile(findHomePath(c.IdentityFile))
 	if err != nil {
 		log.Fatalf("Failed to read private key file: %s", err)
 		return nil, err
@@ -28,7 +24,7 @@ func RunCommandWithTimeout(c *SSHConfig, cmd string, timeout time.Duration) ([]b
 	}
 
 	config := &ssh.ClientConfig{
-		User: user,
+		User: c.User,
 		Auth: []ssh.AuthMethod{
 			ssh.PublicKeys(signer),
 		},
@@ -37,7 +33,7 @@ func RunCommandWithTimeout(c *SSHConfig, cmd string, timeout time.Duration) ([]b
 	}
 
 	// Create SSH client
-	client, err := ssh.Dial("tcp", addr, config)
+	client, err := ssh.Dial("tcp", net.JoinHostPort(c.HostName, c.Port), config)
 	if err != nil {
 		log.Fatalf("Failed to dial: %s", err)
 		return nil, err
