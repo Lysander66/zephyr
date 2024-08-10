@@ -20,6 +20,12 @@ Go bindings for aria2
 
 [在多台服务器上批量运行命令](https://www.bilibili.com/video/BV1WN411r7gH)
 
+## Stream URL Generator
+
+阿里/腾讯/网宿 直播流地址生成器
+
+拼接鉴权 Key 和时间戳，然后 md5
+
 ## thanks
 
 - [gorilla/websocket](https://github.com/gorilla/websocket)

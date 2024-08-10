@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.0 / 2024-08-10
+
+- [FEATURE] Stream URL Generator
+
 ## 0.2.0 / 2024-08-10
 
 - [FEATURE] Go bindings for aria2

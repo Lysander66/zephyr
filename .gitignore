@@ -15,4 +15,4 @@ cbuild
 .test/
 main
 output/
-zephyr
+.zed/
