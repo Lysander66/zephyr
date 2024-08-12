@@ -6,13 +6,20 @@ Zephyr 来自希腊语，表示“微风”，暗示着这是一个轻量级的�
 
 ## aria2go
 
-Go bindings for aria2
+**Go bindings for aria2**
 
 - aria2.addUri
 - aria2.tellStatus
 - aria2.tellStopped
 - aria2.getGlobalStat
 - system.listMethods
+
+## zexec
+
+**os/exec wrapper**
+
+- StartProcess & StopProcess
+- ffmpeg command export
 
 ## znet
 

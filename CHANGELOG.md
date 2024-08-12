@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.5.0 / 2024-08-12
+
+- [FEATURE] run command
+
 ## 0.4.0 / 2024-08-10
 
 - [FEATURE] net/http client wrapper

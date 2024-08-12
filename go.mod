@@ -6,6 +6,7 @@ require (
 	github.com/gorilla/websocket v1.5.3
 	github.com/tidwall/gjson v1.17.3
 	golang.org/x/crypto v0.10.0
+	gopkg.in/natefinch/lumberjack.v2 v2.2.1
 )
 
 require (
