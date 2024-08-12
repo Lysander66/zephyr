@@ -3,6 +3,7 @@
 ## 0.5.0 / 2024-08-12
 
 - [FEATURE] run command
+- [ENHANCEMENT] exit status 127
 
 ## 0.4.0 / 2024-08-10
 

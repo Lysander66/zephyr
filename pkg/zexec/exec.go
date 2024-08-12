@@ -5,7 +5,9 @@ import (
 	"bytes"
 	"fmt"
 	"log/slog"
+	"os"
 	"os/exec"
+	"path"
 	"strconv"
 	"strings"
 	"sync"
@@ -19,6 +21,9 @@ var (
 
 // StartProcess 启动一个新进程并将其与 uniqueID 关联
 func StartProcess(uniqueID, command string, args ...string) error {
+	os.Setenv("LD_LIBRARY_PATH", path.Join(os.Getenv("HOME"), "/ffmpeg_build/lib"))
+	//cmd := exec.Command("/bin/sh", "-c", "export LD_LIBRARY_PATH=$HOME/ffmpeg_build/lib:$LD_LIBRARY_PATH && "+args)
+
 	cmd := exec.Command(command, args...)
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 
