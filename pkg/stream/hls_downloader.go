@@ -10,6 +10,7 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -31,6 +32,7 @@ type HLSDownloader struct {
 	AutoCleanup bool
 	ProgressCh  chan Progress
 	Headers     map[string]string
+	wg          sync.WaitGroup
 	total       int
 }
 
@@ -47,8 +49,6 @@ func NewHLSDownloader(uri, name, outputDir string, numParallel uint) *HLSDownloa
 }
 
 func (d *HLSDownloader) Download() error {
-	defer close(d.ProgressCh)
-
 	err := os.MkdirAll(d.OutputDir, os.ModePerm)
 	if err != nil {
 		return fmt.Errorf("error creating output directory: %w", err)
@@ -66,6 +66,7 @@ func (d *HLSDownloader) Download() error {
 	var segmentExt string
 	var n atomic.Int32
 	limiter := make(chan struct{}, d.NumParallel)
+	isReady := make(chan struct{})
 
 	p := &HLSPlayer{
 		URI: d.URI,
@@ -75,6 +76,8 @@ func (d *HLSDownloader) Download() error {
 				writeFile(filepath.Join(d.TempDir, "variant.m3u8"), b)
 			case *playlist.Media:
 				d.total = len(pls.Segments)
+				d.wg.Add(d.total)
+				close(isReady)
 				// deep copy
 				clonedPls := &playlist.Media{}
 				data, _ := json.Marshal(pls)
@@ -85,7 +88,7 @@ func (d *HLSDownloader) Download() error {
 						segmentExt = path.Ext(u.Path)
 						slog.Debug("file extension ", "ext", segmentExt)
 					}
-					seg.URI = fmt.Sprintf("%d.%s", i+1, segmentExt)
+					seg.URI = fmt.Sprintf("%d%s", i+1, segmentExt)
 				}
 				data, _ = clonedPls.Marshal()
 				writeFile(filepath.Join(d.TempDir, "playlist.m3u8"), data)
@@ -94,10 +97,14 @@ func (d *HLSDownloader) Download() error {
 		},
 		FetchSegment: func(url string, i int) error {
 			limiter <- struct{}{}
-			go func() {
-				defer func() { <-limiter }()
 
-				filename := filepath.Join(d.TempDir, fmt.Sprintf("%d.%s", i+1, segmentExt))
+			go func() {
+				defer func() {
+					<-limiter
+					d.wg.Done()
+				}()
+
+				filename := filepath.Join(d.TempDir, fmt.Sprintf("%d%s", i+1, segmentExt))
 				if err := downloadSegment(client, url, filename); err != nil {
 					slog.Error("downloadSegment", "err", err, "url", url)
 					return
@@ -111,13 +118,13 @@ func (d *HLSDownloader) Download() error {
 
 	err = p.Run()
 	if err != nil {
+		close(d.ProgressCh)
 		return err
 	}
 
-	err = p.Wait()
-	if err != nil {
-		return err
-	}
+	<-isReady
+	d.wg.Wait()
+	close(d.ProgressCh)
 	slog.Info("Download completed", "elapsed", time.Since(now).String())
 
 	filename := d.Name + ".mp4"
@@ -147,7 +154,7 @@ func (d *HLSDownloader) Cleanup() error {
 }
 
 func (d *HLSDownloader) reportProgress(downloaded, total int) {
-	slog.Debug("reportProgress", "-->", fmt.Sprintf("%d/%d", downloaded, total))
+	slog.Debug("report", "progress", fmt.Sprintf("%d/%d", downloaded, total))
 	d.ProgressCh <- Progress{Downloaded: downloaded, Total: total}
 }
 
