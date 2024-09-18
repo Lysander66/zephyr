@@ -13,14 +13,13 @@ import (
 	"github.com/bluenviron/gohlslib/pkg/playlist"
 )
 
-const (
-	DefaultLiveStartIndex = -3
-)
+const defaultLiveStartIndex = -3
 
 type (
 	OnRequestFunc            func(*http.Request)
 	OnPlaylistDownloadedFunc func([]byte, playlist.Playlist)
-	OnSegmentDownloadedFunc  func([]byte, playlist.MediaSegment)
+	OnSegmentDownloadedFunc  func([]byte)
+	FetchSegmentFunc         func(string, int) error
 )
 
 type HLSPlayer struct {
@@ -28,8 +27,6 @@ type HLSPlayer struct {
 	URI string
 	// Segment index to start live streams at (negative values are from the end)
 	LiveStartIndex *int
-	// Number of concurrent segment downloads, only for Video on demand (VOD)
-	NumParallel uint
 	// HTTP client used for making requests
 	HTTPClient *http.Client
 
@@ -41,6 +38,8 @@ type HLSPlayer struct {
 	OnPlaylistDownloaded OnPlaylistDownloadedFunc
 	// Called after downloading a segment
 	OnSegmentDownloaded OnSegmentDownloadedFunc
+	// Custom function for fetching media segments
+	FetchSegment FetchSegmentFunc
 
 	// Private fields
 
@@ -54,8 +53,6 @@ type HLSPlayer struct {
 	lastLoadTimeMillis int64
 	// Current media sequence number being processed
 	curSeqNo int
-	// Channel for delivering media segments
-	segCh chan *playlist.MediaSegment
 	// Channel for reporting errors
 	outErr chan error
 }
@@ -68,25 +65,37 @@ func (c *HLSPlayer) Run() error {
 	}
 
 	if c.LiveStartIndex == nil {
-		c.LiveStartIndex = intPtr(DefaultLiveStartIndex)
+		c.LiveStartIndex = intPtr(defaultLiveStartIndex)
 	}
+
 	if c.HTTPClient == nil {
 		c.HTTPClient = http.DefaultClient
 	}
 	if c.OnRequest == nil {
-		c.OnRequest = func(_ *http.Request) {}
+		c.OnRequest = func(*http.Request) {}
 	}
+
 	if c.OnPlaylistDownloaded == nil {
-		c.OnPlaylistDownloaded = func(_ []byte, _ playlist.Playlist) {}
+		c.OnPlaylistDownloaded = func([]byte, playlist.Playlist) {}
 	}
 	if c.OnSegmentDownloaded == nil {
-		c.OnSegmentDownloaded = func(_ []byte, _ playlist.MediaSegment) {}
+		c.OnSegmentDownloaded = func([]byte) {}
+	}
+
+	if c.FetchSegment == nil {
+		c.FetchSegment = func(url string, _ int) error {
+			b, err := fetch(c.ctx, c.HTTPClient, c.OnRequest, url)
+			if err != nil {
+				return err
+			}
+			c.OnSegmentDownloaded(b)
+			return nil
+		}
 	}
 
 	if c.ctx == nil {
 		c.ctx, c.ctxCancel = context.WithCancel(context.Background())
 	}
-	c.segCh = make(chan *playlist.MediaSegment, 1)
 	c.outErr = make(chan error, 1)
 
 	go func() {
@@ -96,8 +105,8 @@ func (c *HLSPlayer) Run() error {
 	return nil
 }
 
-func (c *HLSPlayer) Wait() chan error {
-	return c.outErr
+func (c *HLSPlayer) Wait() error {
+	return <-c.outErr
 }
 
 func (c *HLSPlayer) Stop() {
@@ -149,82 +158,61 @@ func (c *HLSPlayer) run() error {
 		return fmt.Errorf("invalid playlist")
 	}
 
-	numParallel := 1
-	if c.NumParallel > 0 && isVOD(pls) {
-		numParallel = int(c.NumParallel)
-	}
-
-	// [Go 1.22](https://go.dev/doc/go1.22)
-	for range numParallel {
-		// Download media segments
-		go func() {
-			for {
-				select {
-				case seg := <-c.segCh:
-					c.fetchMediaSegment(seg)
-				case <-c.ctx.Done():
-					// Process remaining segments
-					for len(c.segCh) > 0 {
-						seg := <-c.segCh
-						c.fetchMediaSegment(seg)
-					}
-					slog.Info("loadMediaSegments: quit", "url", c.playlistURL.String())
-					return
-				}
-			}
-		}()
-	}
-
 	// Select the starting segments
 	c.curSeqNo = selectCurSeqNo(*c.LiveStartIndex, pls)
 
 	for i := c.curSeqNo - pls.MediaSequence; i < len(pls.Segments); i++ {
-		c.segCh <- pls.Segments[i]
+		if err := c.fetchMediaSegment(pls.Segments[i], i); err != nil {
+			return err
+		}
 	}
 	c.curSeqNo = pls.MediaSequence + max(len(pls.Segments)-1, 0)
 
-	// Reload media playlist
-	if !isVOD(pls) {
-		timer := time.NewTimer(0)
-		defer timer.Stop()
+	// Video on demand (VOD)
+	if isVOD(pls) {
+		return nil
+	}
 
-		for {
-			select {
-			case <-timer.C:
-				pls, err := c.fetchMediaPlaylist(c.playlistURL.String())
-				if err != nil {
-					slog.Error("fetchMediaPlaylist", "err", err, "url", c.playlistURL.String())
-					return err
-				}
-
-				reloadInterval := defaultReloadInterval(pls)
-
-				// If there's still no more segments, switch to a reload interval of half the target duration.
-				if pls.MediaSequence+len(pls.Segments)-1 <= c.curSeqNo {
-					reloadInterval = time.Duration(max(pls.TargetDuration/2, 1)) * time.Second
-				}
-
-				timer.Reset(reloadInterval)
-
-				for i, seg := range pls.Segments {
-					if pls.MediaSequence+i > c.curSeqNo {
-						c.segCh <- seg
-						c.curSeqNo = pls.MediaSequence + i
-					}
-				}
-
-				if pls.Endlist {
-					c.Stop()
-					slog.Info("no more media segments")
-				}
-			case <-c.ctx.Done():
-				slog.Info("reloadMediaPlaylist: quit", "url", c.playlistURL.String())
-				return nil
+	// Live stream
+	timer := time.NewTimer(0)
+	defer timer.Stop()
+	for {
+		select {
+		case <-timer.C:
+			pls, err := c.fetchMediaPlaylist(c.playlistURL.String())
+			if err != nil {
+				slog.Error("fetchMediaPlaylist", "err", err, "url", c.playlistURL.String())
+				return err
 			}
+
+			reloadInterval := defaultReloadInterval(pls)
+
+			// If there's still no more segments, switch to a reload interval of half the target duration.
+			if pls.MediaSequence+len(pls.Segments)-1 <= c.curSeqNo {
+				reloadInterval = time.Duration(max(pls.TargetDuration/2, 1)) * time.Second
+			}
+
+			timer.Reset(reloadInterval)
+
+			for i, seg := range pls.Segments {
+				if pls.MediaSequence+i > c.curSeqNo {
+					if err := c.fetchMediaSegment(seg, i); err != nil {
+						slog.Error("fetchMediaSegment", "err", err, "url", seg.URI)
+					}
+					c.curSeqNo = pls.MediaSequence + i
+				}
+			}
+
+			if pls.Endlist {
+				c.Stop()
+				slog.Info("no more media segments")
+			}
+		case <-c.ctx.Done():
+			slog.Info("reloadMediaPlaylist: quit", "url", c.playlistURL.String())
+			return nil
 		}
 	}
 
-	return nil
 }
 
 func (c *HLSPlayer) fetchMediaPlaylist(url string) (*playlist.Media, error) {
@@ -249,19 +237,18 @@ func (c *HLSPlayer) fetchMediaPlaylist(url string) (*playlist.Media, error) {
 	return pls, nil
 }
 
-func (c *HLSPlayer) fetchMediaSegment(seg *playlist.MediaSegment) error {
+func (c *HLSPlayer) fetchMediaSegment(seg *playlist.MediaSegment, i int) error {
 	u, err := AbsoluteURL(c.playlistURL, seg.URI)
 	if err != nil {
-		slog.Error("fetchMediaSegment", "err", err, "url", seg.URI)
+		slog.Error("AbsoluteURL", "err", err, "url", seg.URI)
 		return err
 	}
 
-	b, err := fetch(c.ctx, c.HTTPClient, c.OnRequest, u.String())
+	err = c.FetchSegment(u.String(), i)
 	if err != nil {
+		slog.Error("fetchMediaSegment", "err", err, "url", u.String())
 		return err
 	}
-
-	c.OnSegmentDownloaded(b, *seg)
 
 	return nil
 }

@@ -4,6 +4,14 @@ Zephyr comes from Greek, which means "breeze", implying that this is a lightweig
 
 Zephyr 来自希腊语，表示“微风”，暗示着这是一个轻量级的工具。
 
+## stream
+
+- HLS Downloader
+- Live stream relaying feature
+  - Support for pulling FLV live streams
+  - Support for pulling HLS live streams
+  - Capability to push streams via RTMP
+
 ## aria2go
 
 **Go bindings for aria2**
@@ -39,5 +47,7 @@ net/http client wrapper
 
 ## thanks
 
+- [yapingcat/gomedia](https://github.com/yapingcat/gomedia)
+- [bluenviron/gohlslib](https://github.com/bluenviron/gohlslib)
 - [gorilla/websocket](https://github.com/gorilla/websocket)
 - [tidwall/gjson](https://github.com/tidwall/gjson)

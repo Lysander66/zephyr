@@ -11,7 +11,6 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/bluenviron/gohlslib/pkg/playlist"
 	"github.com/yapingcat/gomedia/go-codec"
 	"github.com/yapingcat/gomedia/go-flv"
 	"github.com/yapingcat/gomedia/go-mpeg2"
@@ -135,7 +134,7 @@ func (r *Relayer) Run() error {
 			URI:                 resp.Request.URL.String(),
 			HTTPClient:          r.httpClient,
 			OnRequest:           r.onRequest,
-			OnSegmentDownloaded: func(b []byte, _ playlist.MediaSegment) { demuxer.Input(bytes.NewReader(b)) },
+			OnSegmentDownloaded: func(b []byte) { demuxer.Input(bytes.NewReader(b)) },
 			ctx:                 r.ctx,
 			ctxCancel:           r.ctxCancel,
 		}
