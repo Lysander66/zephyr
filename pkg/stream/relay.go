@@ -139,7 +139,7 @@ func (r *Relayer) Run() error {
 			ctxCancel:           r.ctxCancel,
 		}
 
-		return r.player.Run()
+		return r.player.Start()
 	}
 
 	if pt == "flv" {

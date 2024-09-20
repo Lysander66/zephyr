@@ -116,7 +116,7 @@ func (d *HLSDownloader) Download() error {
 		},
 	}
 
-	err = p.Run()
+	err = p.Start()
 	if err != nil {
 		close(d.ProgressCh)
 		return err

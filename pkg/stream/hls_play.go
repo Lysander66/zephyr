@@ -58,6 +58,13 @@ type HLSPlayer struct {
 }
 
 func (c *HLSPlayer) Run() error {
+	if err := c.Start(); err != nil {
+		return err
+	}
+	return c.Wait()
+}
+
+func (c *HLSPlayer) Start() error {
 	var err error
 	c.playlistURL, err = url.Parse(c.URI)
 	if err != nil {
