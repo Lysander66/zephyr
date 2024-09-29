@@ -140,12 +140,31 @@ func (d *HLSDownloader) Download() error {
 }
 
 func (d *HLSDownloader) mergeToMP4(filename string) error {
-	args := fmt.Sprintf("cd %s && ffmpeg -i playlist.m3u8 -c copy %s && mv %[2]s %s", d.TempDir, filename, d.OutputDir)
-	if err := exec.Command("/bin/sh", "-c", args).Run(); err != nil {
-		slog.Info(args)
-		slog.Error("mergeToMP4", "err", err)
-		return err
+	var cmd *exec.Cmd
+
+	ffmpegArgs := []string{
+		"-i", filepath.Join(d.TempDir, "playlist.m3u8"),
+		"-c", "copy",
+		filepath.Join(d.TempDir, filename),
 	}
+
+	cmd = exec.Command("ffmpeg", ffmpegArgs...)
+	cmd.Dir = d.TempDir
+
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		slog.Error("mergeToMP4: ffmpeg failed", "err", err, "output", string(output))
+		return fmt.Errorf("ffmpeg failed: %w", err)
+	}
+
+	srcPath := filepath.Join(d.TempDir, filename)
+	dstPath := filepath.Join(d.OutputDir, filename)
+	err = os.Rename(srcPath, dstPath)
+	if err != nil {
+		slog.Error("mergeToMP4: failed to move file", "err", err)
+		return fmt.Errorf("failed to move file: %w", err)
+	}
+
 	return nil
 }
 
