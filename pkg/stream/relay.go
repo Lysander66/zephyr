@@ -117,6 +117,11 @@ func (r *Relayer) Run() error {
 		pt = "flv"
 	}
 
+	// Fallback to URL-based inference if Content-Type is inconclusive
+	if pt == "" {
+		pt = InferStreamType(r.src)
+	}
+
 	if pt == "hls" {
 		demuxer := mpeg2.NewTSDemuxer()
 		demuxer.OnFrame = func(cid mpeg2.TS_STREAM_TYPE, frame []byte, pts uint64, dts uint64) {
@@ -172,4 +177,19 @@ func (r *Relayer) Run() error {
 
 func (r *Relayer) Stop() {
 	r.ctxCancel()
+}
+
+func InferStreamType(rawURL string) string {
+	u, err := url.Parse(rawURL)
+	if err != nil {
+		slog.Error("Error parsing URL", "url", rawURL, "err", err)
+		return ""
+	}
+	if strings.HasSuffix(u.Path, ".m3u8") {
+		return "hls"
+	}
+	if strings.HasSuffix(u.Path, ".flv") || strings.HasSuffix(u.Path, ".xs") {
+		return "flv"
+	}
+	return ""
 }
