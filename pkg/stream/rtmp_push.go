@@ -35,7 +35,7 @@ func (p *RTMPPublisher) Start(ctx context.Context, cancel context.CancelFunc, ad
 
 	isReady := make(chan struct{})
 
-	cli := rtmp.NewRtmpClient(rtmp.WithEnablePublish())
+	cli := rtmp.NewRtmpClient(rtmp.WithComplexHandshake(), rtmp.WithEnablePublish())
 	cli.OnStateChange(func(newState rtmp.RtmpState) {
 		if newState == rtmp.STATE_RTMP_PUBLISH_START {
 			slog.Info("ready for publish", "url", address)

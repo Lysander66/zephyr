@@ -110,7 +110,11 @@ func (r *Relayer) Run() error {
 
 	// read probe
 	var pt string
-	if strings.Contains(contentType, "application/vnd.apple.mpegurl") || strings.Contains(contentType, "application/x-mpegurl") {
+
+	// application/vnd.apple.mpegurl
+	// application/x-mpegurl
+	// audio/mpegurl
+	if strings.Contains(contentType, "mpegurl") {
 		pt = "hls"
 	}
 	if strings.Contains(contentType, "video/x-flv") || strings.Contains(contentType, "video/x-p2p") {
