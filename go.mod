@@ -8,6 +8,7 @@ require (
 	github.com/tidwall/gjson v1.17.3
 	github.com/yapingcat/gomedia v0.0.0-20240906162731-17feea57090c
 	golang.org/x/crypto v0.27.0
+	golang.org/x/exp v0.0.0-20250305212735-054e65f0b394
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1
 )
 
