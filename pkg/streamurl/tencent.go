@@ -17,7 +17,7 @@ func (t TxGenerator) PublishingAddress(key, app, stream string, exp int64) strin
 }
 
 func (t TxGenerator) RTMPPlayUrl(key, app, stream string, exp int64) string {
-	return "Not implemented"
+	return fmt.Sprintf("/%s/%s", app, stream) + t.secret(key, stream, exp)
 }
 
 func (t TxGenerator) FlvPlayUrl(key, app, stream string, exp int64) string {
