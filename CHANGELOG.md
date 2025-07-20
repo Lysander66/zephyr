@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.5] - 2025-07-20
+
+### Added
+
+- Huawei Cloud stream URL generator
+
 ## [0.7.4] - 2025-05-22
 
 ### Added
@@ -102,6 +108,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Initial release with SSH client functionality to execute commands over SSH connections
 
+[0.7.5]: https://github.com/lysander66/zephyr/compare/v0.7.4...v0.7.5
 [0.7.4]: https://github.com/lysander66/zephyr/compare/v0.7.3...v0.7.4
 [0.7.3]: https://github.com/lysander66/zephyr/compare/v0.7.2...v0.7.3
 [0.7.2]: https://github.com/lysander66/zephyr/compare/v0.7.1...v0.7.2

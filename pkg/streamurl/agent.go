@@ -73,6 +73,8 @@ func NewAgent(name string, opts ...Option) (*Agent, error) {
 		agent.generator = &TxGenerator{}
 	case "wangsu":
 		agent.generator = &WsGenerator{}
+	case "huawei":
+		agent.generator = &HwGenerator{}
 	default:
 		return nil, fmt.Errorf("%s is not supported yet", name)
 	}
