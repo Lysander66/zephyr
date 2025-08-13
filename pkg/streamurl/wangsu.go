@@ -16,7 +16,7 @@ func (w WsGenerator) PublishingAddress(key, app, stream string, exp int64) strin
 }
 
 func (w WsGenerator) RTMPPlayUrl(key, app, stream string, exp int64) string {
-	return "Not implemented"
+	return fmt.Sprintf("/%s/%s", app, stream) + w.secret(key, app, stream, exp)
 }
 
 func (w WsGenerator) FlvPlayUrl(key, app, stream string, exp int64) string {

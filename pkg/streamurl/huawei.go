@@ -29,13 +29,17 @@ func (g *HwGenerator) HlsPlayUrl(key, app, stream string, exp int64) string {
 }
 
 func (g *HwGenerator) generateURL(proto, key, app, stream string, exp int64, isPush bool) string {
-	hwTime := strconv.FormatInt(exp, 16)
-	hwSecret := zcrypto.HmacSHA256(stream+hwTime, key)
-
 	path := fmt.Sprintf("/%s/%s", app, stream)
 	if !isPush && proto != "rtmp" {
 		path = fmt.Sprintf("%s.%s", path, proto)
 	}
 
-	return fmt.Sprintf("%s?hwSecret=%s&hwTime=%s", path, hwSecret, hwTime)
+	if key != "" && exp > 0 {
+		hwTime := strconv.FormatInt(exp, 16)
+		stringToSign := stream + hwTime
+		hwSecret := zcrypto.HmacSHA256(stringToSign, key)
+		return fmt.Sprintf("%s?hwSecret=%s&hwTime=%s", path, hwSecret, hwTime)
+	}
+
+	return path
 }
