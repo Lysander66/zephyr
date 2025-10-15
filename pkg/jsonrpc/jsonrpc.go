@@ -2,10 +2,12 @@ package jsonrpc
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"strconv"
+	"time"
 )
 
 // JSON-RPC	https://www.jsonrpc.org/specification
@@ -70,6 +72,7 @@ func NewRequest[T RequestID](method string, params any, id T) *Request {
 type Client struct {
 	endpoint   string
 	httpClient *http.Client
+	timeout    time.Duration
 }
 
 type Option func(o *Client)
@@ -78,10 +81,15 @@ func HttpClient(hc *http.Client) Option {
 	return func(o *Client) { o.httpClient = hc }
 }
 
+func Timeout(timeout time.Duration) Option {
+	return func(o *Client) { o.timeout = timeout }
+}
+
 func NewClient(endpoint string, opts ...Option) *Client {
 	c := &Client{
 		endpoint:   endpoint,
 		httpClient: &http.Client{},
+		timeout:    30 * time.Second, // default 30 seconds
 	}
 	for _, opt := range opts {
 		opt(c)
@@ -89,28 +97,48 @@ func NewClient(endpoint string, opts ...Option) *Client {
 	return c
 }
 
-func (c *Client) Call(request *Request) (*Response, error) {
+func (c *Client) Call(ctx context.Context, request *Request) (*Response, error) {
 	var payload bytes.Buffer
 	if err := json.NewEncoder(&payload).Encode(request); err != nil {
 		return nil, err
 	}
-	httpResponse, err := c.httpClient.Post(c.endpoint, "application/json", &payload)
+
+	// If the passed ctx has no timeout, use the default timeout
+	if _, hasDeadline := ctx.Deadline(); !hasDeadline {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, c.timeout)
+		defer cancel()
+	}
+
+	// Create HTTP request
+	httpReq, err := http.NewRequestWithContext(ctx, "POST", c.endpoint, &payload)
+	if err != nil {
+		return nil, err
+	}
+	httpReq.Header.Set("Content-Type", "application/json")
+
+	httpResponse, err := c.httpClient.Do(httpReq)
 	if err != nil {
 		return nil, err
 	}
 	defer httpResponse.Body.Close()
 
+	// Check HTTP status code
+	if httpResponse.StatusCode < 200 || httpResponse.StatusCode >= 300 {
+		return nil, fmt.Errorf("HTTP %v for method %v", httpResponse.StatusCode, request.Method)
+	}
+
 	var rpcResponse *Response
 	err = json.NewDecoder(httpResponse.Body).Decode(&rpcResponse)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to decode JSON response for %v: %v", request.Method, err)
 	}
 
 	if rpcResponse == nil {
-		return nil, fmt.Errorf("rpc call %v() status code: %v. rpc response missing", request.Method, httpResponse.StatusCode)
+		return nil, fmt.Errorf("null response for method %v", request.Method)
 	}
 	if rpcResponse.Error != nil {
-		return nil, fmt.Errorf("rpc call %v() status code: %v. rpc response error: %v", request.Method, httpResponse.StatusCode, rpcResponse.Error)
+		return nil, rpcResponse.Error
 	}
 
 	return rpcResponse, nil

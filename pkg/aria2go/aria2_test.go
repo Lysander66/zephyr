@@ -1,6 +1,7 @@
 package aria2go
 
 import (
+	"context"
 	"encoding/json"
 	"log"
 	"testing"
@@ -39,7 +40,7 @@ func TestClient_AddURI(t *testing.T) {
 		}
 	)
 
-	gid, err := testClient.AddURI(uris, options, &DummyNotifier{})
+	gid, err := testClient.AddURI(context.Background(), uris, options, &DummyNotifier{})
 	if err != nil {
 		t.Error(err)
 		return
@@ -50,7 +51,7 @@ func TestClient_AddURI(t *testing.T) {
 }
 
 func TestClient_TellStatus(t *testing.T) {
-	statusInfo, err := testClient.TellStatus("c28fd51f7b429579", "gid", "status")
+	statusInfo, err := testClient.TellStatus(context.Background(), "c28fd51f7b429579", "gid", "status")
 	if err != nil {
 		t.Log(err)
 		return
@@ -60,7 +61,7 @@ func TestClient_TellStatus(t *testing.T) {
 }
 
 func TestClient_TellStopped(t *testing.T) {
-	list, err := testClient.TellStopped(0, 100, "errorCode", "errorMessage", "gid", "status")
+	list, err := testClient.TellStopped(context.Background(), 0, 100, "errorCode", "errorMessage", "gid", "status")
 	if err != nil {
 		t.Log(err)
 		return
@@ -71,7 +72,7 @@ func TestClient_TellStopped(t *testing.T) {
 }
 
 func TestClient_GetGlobalStat(t *testing.T) {
-	globalStat, err := testClient.GetGlobalStat()
+	globalStat, err := testClient.GetGlobalStat(context.Background())
 	if err != nil {
 		t.Error(err)
 		return
@@ -81,7 +82,7 @@ func TestClient_GetGlobalStat(t *testing.T) {
 }
 
 func TestClient_ListMethods(t *testing.T) {
-	methods, err := testClient.ListMethods()
+	methods, err := testClient.ListMethods(context.Background())
 	if err != nil {
 		t.Error(err)
 		return

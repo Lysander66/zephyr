@@ -1,6 +1,7 @@
 package aria2go
 
 import (
+	"context"
 	"encoding/json"
 	"log/slog"
 	"net/url"
@@ -203,7 +204,7 @@ func (c *Client) token() string {
 
 // AddURI
 // https://aria2.github.io/manual/en/html/aria2c.html#aria2.addUri
-func (c *Client) AddURI(uris []string, options ...any) (string, error) {
+func (c *Client) AddURI(ctx context.Context, uris []string, options ...any) (string, error) {
 	var params []any
 	if c.secret != "" {
 		params = append(params, c.token())
@@ -214,7 +215,7 @@ func (c *Client) AddURI(uris []string, options ...any) (string, error) {
 	}
 
 	req := jsonrpc.NewRequest(methodAddUri, params, time.Now().UnixNano())
-	resp, err := c.rpcClient.Call(req)
+	resp, err := c.rpcClient.Call(ctx, req)
 	if err != nil {
 		return "", err
 	}
@@ -224,7 +225,7 @@ func (c *Client) AddURI(uris []string, options ...any) (string, error) {
 
 // TellStatus | active waiting paused error complete removed
 // https://aria2.github.io/manual/en/html/aria2c.html#aria2.tellStatus
-func (c *Client) TellStatus(gid string, keys ...string) (statusInfo StatusInfo, err error) {
+func (c *Client) TellStatus(ctx context.Context, gid string, keys ...string) (statusInfo StatusInfo, err error) {
 	var params []any
 	if c.secret != "" {
 		params = append(params, c.token())
@@ -234,7 +235,7 @@ func (c *Client) TellStatus(gid string, keys ...string) (statusInfo StatusInfo, 
 		params = append(params, keys)
 	}
 	req := jsonrpc.NewRequest(methodTellStatus, params, time.Now().UnixNano())
-	resp, err := c.rpcClient.Call(req)
+	resp, err := c.rpcClient.Call(ctx, req)
 	if err != nil {
 		return
 	}
@@ -243,7 +244,7 @@ func (c *Client) TellStatus(gid string, keys ...string) (statusInfo StatusInfo, 
 	return
 }
 
-func (c *Client) TellStopped(offset, num int, keys ...string) (list []StatusInfo, err error) {
+func (c *Client) TellStopped(ctx context.Context, offset, num int, keys ...string) (list []StatusInfo, err error) {
 	var params []any
 	if c.secret != "" {
 		params = append(params, c.token())
@@ -253,7 +254,7 @@ func (c *Client) TellStopped(offset, num int, keys ...string) (list []StatusInfo
 		params = append(params, keys)
 	}
 	req := jsonrpc.NewRequest(methodTellStopped, params, time.Now().UnixNano())
-	resp, err := c.rpcClient.Call(req)
+	resp, err := c.rpcClient.Call(ctx, req)
 	if err != nil {
 		return
 	}
@@ -262,13 +263,13 @@ func (c *Client) TellStopped(offset, num int, keys ...string) (list []StatusInfo
 	return
 }
 
-func (c *Client) GetGlobalStat() (stat GlobalStat, err error) {
+func (c *Client) GetGlobalStat(ctx context.Context) (stat GlobalStat, err error) {
 	var params []any
 	if c.secret != "" {
 		params = append(params, c.token())
 	}
 	req := jsonrpc.NewRequest(methodGetGlobalStat, params, time.Now().UnixNano())
-	resp, err := c.rpcClient.Call(req)
+	resp, err := c.rpcClient.Call(ctx, req)
 	if err != nil {
 		return
 	}
@@ -277,9 +278,9 @@ func (c *Client) GetGlobalStat() (stat GlobalStat, err error) {
 	return
 }
 
-func (c *Client) ListMethods() (methods []string, err error) {
+func (c *Client) ListMethods(ctx context.Context) (methods []string, err error) {
 	req := jsonrpc.NewRequest(methodListMethods, nil, time.Now().UnixNano())
-	resp, err := c.rpcClient.Call(req)
+	resp, err := c.rpcClient.Call(ctx, req)
 	if err != nil {
 		return
 	}
