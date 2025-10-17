@@ -135,10 +135,7 @@ func (c *Client) Call(ctx context.Context, request *Request) (*Response, error) 
 	}
 
 	if rpcResponse == nil {
-		return nil, fmt.Errorf("null response for method %v", request.Method)
-	}
-	if rpcResponse.Error != nil {
-		return nil, rpcResponse.Error
+		return nil, fmt.Errorf("empty response for %v", request.Method)
 	}
 
 	return rpcResponse, nil
